@@ -1,6 +1,6 @@
 # linode-update-firewall
 
-This script runs its job every 5 minutes in the Docker conntainer. This will help isolate any issues and deploy in multiple environments.
+The Linode firewall uses an allowlist to prevent unwanted traffic on my server. This script is to update the allowlist in the Linode firewall automatically and runs its job every 5 minutes in the Docker conntainer.
 
 ## How to Run
 
