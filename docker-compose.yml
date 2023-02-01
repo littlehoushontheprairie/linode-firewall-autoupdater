@@ -1,0 +1,23 @@
+version: '3.5'
+
+services:
+  linode_update_firewall:
+    container_name: linode_update_firewall
+    image: 'linode_update_firewall/linode_update_firewall:latest'
+    restart: unless-stopped
+    network_mode: host
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    environment:
+      TZ: America/Los_Angeles
+      LINODE_TOKEN: '${LINODE_TOKEN}'
+      LINODE_FIREWALL_ID: '${LINODE_FIREWALL_ID}'
+      LINODE_LABEL_NAME: '${LINODE_LABEL_NAME}'
+      FASTMAIL_TOKEN: '${FASTMAIL_TOKEN}'
+      FASTMAIL_FROM: '${FASTMAIL_FROM}'
+      FASTMAIL_TO: '${FASTMAIL_TO}'
+      FASTMAIL_TO_GREETING: '${FASTMAIL_TO_GREETING}'
