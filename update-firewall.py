@@ -106,31 +106,53 @@ def job():
     oldIpAddress = ''
 
     # Ipify GET
-    ip = requests.get('https://api.ipify.org?format=json').json()['ip']
+    ipResponse = requests.get('https://api.ipify.org?format=json')
 
-    # Linode
-    firewall = requests.get('https://api.linode.com/v4/networking/firewalls/' +
-                            str(LINODE_FIREWALL_ID) + '/rules', headers={'Authorization': 'Bearer ' + LINODE_TOKEN}).json()
-    inboundRules = firewall['inbound']
+    if ipResponse.status_code == 200:
+        ip = requests.get('https://api.ipify.org?format=json').json()['ip']
 
-    for inboundRule in inboundRules:
-        if LINODE_LABEL_NAME + '-' in inboundRule['label'] and ip not in inboundRule['addresses']['ipv4'][0]:
-            hasIpChanged = True
-            oldIpAddress = inboundRule['addresses']['ipv4'][0].split('/')[0]
-            inboundRule['addresses']['ipv4'][0] = ip + '/32'
+        # Linode
+        firewallResponse = requests.get('https://api.linode.com/v4/networking/firewalls/' +
+                                        str(LINODE_FIREWALL_ID) + '/rules', headers={'Authorization': 'Bearer ' + LINODE_TOKEN})
 
-    if hasIpChanged:
-        logging.info('Updating Linode firewall, ' + str(LINODE_FIREWALL_ID) +
-                     ', with IP from ' + oldIpAddress + ' to ' + ip + ' for label, ' + LINODE_LABEL_NAME)
+        if firewallResponse.status_code == 200:
+            firewall = firewallResponse.json()
+            inboundRules = firewall['inbound']
 
-        requests.put('https://api.linode.com/v4/networking/firewalls/' +
-                     str(LINODE_FIREWALL_ID) + '/rules', headers={'Authorization': 'Bearer ' + LINODE_TOKEN}, json=firewall)
+            for inboundRule in inboundRules:
+                if LINODE_LABEL_NAME + '-' in inboundRule['label'] and ip not in inboundRule['addresses']['ipv4'][0]:
+                    hasIpChanged = True
+                    oldIpAddress = inboundRule['addresses']['ipv4'][0].split(
+                        '/')[0]
+                    inboundRule['addresses']['ipv4'][0] = ip + '/32'
 
-        logging.info('Sending email...')
-        sendEmail(oldIpAddress, ip)
-        logging.info('Job finished. Firewall has been updated.')
-    else:
-        logging.info('Job finished. No update.')
+            if hasIpChanged:
+                logging.info('Updating Linode firewall, ' + str(LINODE_FIREWALL_ID) +
+                             ', with IP from ' + oldIpAddress + ' to ' + ip + ' for label, ' + LINODE_LABEL_NAME)
+
+                updatedFirewallResponse = requests.put('https://api.linode.com/v4/networking/firewalls/' +
+                                                       str(LINODE_FIREWALL_ID) + '/rules', headers={'Authorization': 'Bearer ' + LINODE_TOKEN}, json=firewall)
+                if updatedFirewallResponse.status_code == 200:
+                    logging.info('Sending email...')
+                    sendEmail(oldIpAddress, ip)
+                    logging.info('Job finished. Firewall has been updated.')
+                elif firewallResponse.status_code in [401, 403]:
+                    logging.error("api.linode.com (update firewall rules) has an authentication issue. Status: {}".format(
+                        str(ipResponse.status_code)))
+                elif firewallResponse.status_code in [500, 502, 503, 504]:
+                    logging.error("api.linode.com (update firewall rules) has failed due to a server side issue has occurred. Status: {}".format(
+                        str(ipResponse.status_code)))
+            else:
+                logging.info('Job finished. No update.')
+        elif firewallResponse.status_code in [401, 403]:
+            logging.error("api.linode.com (get firewall rules) has an authentication issue. Status: {}".format(
+                str(ipResponse.status_code)))
+        elif firewallResponse.status_code in [500, 502, 503, 504]:
+            logging.error("api.linode.com (get firewall rules) has failed due to a server side issue has occurred. Status: {}".format(
+                str(ipResponse.status_code)))
+    elif ipResponse.status_code in [401, 403, 429, 500, 502, 503, 504]:
+        logging.error(
+            "api.ipify.org has returned an unexpected status. Status: {}".format(str(ipResponse.status_code)))
 
 
 schedule.every(5).minutes.do(job)
