@@ -4,7 +4,7 @@ services:
   linode_update_firewall:
     container_name: linode_update_firewall
     image: 'linode_update_firewall/linode_update_firewall:latest'
-    restart: unless-stopped
+    restart: always
     network_mode: host
     build:
       context: .
