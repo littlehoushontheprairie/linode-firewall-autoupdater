@@ -2,9 +2,10 @@ FROM python:latest
 
 WORKDIR /usr/src/app
 
-COPY update-firewall.py .
-COPY tiny_jmap_library.py .
-RUN chmod 0755 update-firewall.py tiny_jmap_library.py
+COPY update_firewall.py .
+COPY smtp.py .
+COPY email_templates.py .
+RUN chmod 0755 update_firewall.py smtp.py email_templates.py
 RUN pip install requests schedule
 
-CMD [ "python", "./update-firewall.py" ]
+CMD [ "python", "./update_firewall.py" ]
