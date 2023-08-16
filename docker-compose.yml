@@ -1,9 +1,9 @@
 version: '3.5'
 
 services:
-  linode_update_firewall:
-    container_name: linode_update_firewall
-    image: 'linode_update_firewall/linode_update_firewall:latest'
+  update_firewall:
+    container_name: update_firewall
+    image: 'update_firewall/update_firewall:latest'
     restart: always
     network_mode: host
     build:
@@ -17,7 +17,11 @@ services:
       LINODE_TOKEN: '${LINODE_TOKEN}'
       LINODE_FIREWALL_ID: '${LINODE_FIREWALL_ID}'
       LINODE_LABEL_NAME: '${LINODE_LABEL_NAME}'
-      FASTMAIL_TOKEN: '${FASTMAIL_TOKEN}'
-      FASTMAIL_FROM: '${FASTMAIL_FROM}'
-      FASTMAIL_TO: '${FASTMAIL_TO}'
-      FASTMAIL_TO_GREETING: '${FASTMAIL_TO_GREETING}'
+      EMAIL_FROM: '${FROM_EMAIL}'
+      EMAIL_TO: '${TO_EMAIL}'
+      EMAIL_GREETING: '${EMAIL_GREETING}'
+      SMTP_URL: '${SMTP_URL}'
+      SMTP_PORT: '${SMTP_PORT}'
+      SMTP_EMAIL: '${SMTP_EMAIL}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      PROXY_URL: '${PROXY_URL}'

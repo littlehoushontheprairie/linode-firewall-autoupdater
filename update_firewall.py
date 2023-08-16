@@ -94,7 +94,7 @@ def job():
             "api.ipify.org has returned an unexpected status. Status: {}".format(str(ip_response.status_code)))
 
 
-schedule.every(1).minutes.do(job)
+schedule.every(5).minutes.do(job)
 
 while True:
     schedule.run_pending()
