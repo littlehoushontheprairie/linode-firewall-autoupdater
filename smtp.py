@@ -6,7 +6,7 @@ from email.mime.multipart import MIMEMultipart
 
 class SMTP:
     def __init__(self, smtp_url, smtp_port, smtp_email, smtp_password):
-        """Initialize using a smtp_url, smtp_port, smtp_email, and smtp_password"""
+        # Initialize using a smtp_url, smtp_port, smtp_email, and smtp_password
         assert len(smtp_url) > 0
         assert len(smtp_port) > 0 and smtp_port.isnumeric()
         assert len(smtp_email) > 0
