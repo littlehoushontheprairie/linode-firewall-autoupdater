@@ -1,4 +1,4 @@
-# Update Linode Firewall
+# Update Linode Firewall Script
 
 The Linode firewall uses an allowlist to prevent unwanted traffic on my server. This script is to update the allowlist in the Linode firewall automatically and runs its job every 5 minutes in the Docker container.
 
