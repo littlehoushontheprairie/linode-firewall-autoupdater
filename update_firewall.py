@@ -3,26 +3,28 @@ import requests
 import logging
 import schedule
 import time
-from smtp import SMTP
+from smtp import SMTP, Email, SMTPOptions
 from email_templates import EmailTemplates
 
-LINODE_TOKEN = os.environ.get("LINODE_TOKEN")
-LINODE_FIREWALL_ID = os.environ.get("LINODE_FIREWALL_ID")
-LINODE_LABEL_NAME = os.environ.get("LINODE_LABEL_NAME")
+LINODE_TOKEN: str = os.environ.get("LINODE_TOKEN", "")
+LINODE_FIREWALL_ID: str = os.environ.get("LINODE_FIREWALL_ID", "")
+LINODE_LABEL_NAME: str = os.environ.get("LINODE_LABEL_NAME", "")
+LINODE_FIREWALL_RULES_URL: str = f"https://api.linode.com/v4/networking/firewalls/{LINODE_FIREWALL_ID}/rules"
+LINODE_HEADERS: dict = {"Authorization": "Bearer " + LINODE_TOKEN}
 
-FROM_EMAIL = os.environ.get("FROM_EMAIL")
-TO_EMAIL = os.environ.get("TO_EMAIL")
-EMAIL_GREETING = os.environ.get("EMAIL_GREETING")
-SMTP_URL = os.environ.get("SMTP_URL")
-SMTP_PORT = os.environ.get("SMTP_PORT")
-SMTP_EMAIL = os.environ.get("SMTP_EMAIL")
+FROM_NAME: str = os.environ.get("FROM_NAME", "Linode Firewall Autoupdater")
+FROM_EMAIL: str = os.environ.get("FROM_EMAIL", "")
+TO_NAME: str = os.environ.get("TO_NAME", "")
+TO_EMAIL: str = os.environ.get("TO_EMAIL", "")
+
+SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
+SMTP_PORT: int = os.environ.get("SMTP_PORT", 465)
+SMTP_USER: str = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 
-PROXY_URL = os.environ.get("PROXY_URL")
+PROXY_URL: str = os.environ.get("PROXY_URL")
 
-IPIFY_API_URL = "https://api.ipify.org?format=json"
-LINODE_FIREWALL_RULES_URL = "https://api.linode.com/v4/networking/firewalls/{}/rules"
-
+IPIFY_API_URL: str = "https://api.ipify.org?format=json"
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s %(levelname)-8s %(message)s",
@@ -32,12 +34,13 @@ logging.basicConfig(format="%(asctime)s %(levelname)-8s %(message)s",
 def job():
     logging.info("Running job...")
 
-    smtp = SMTP(smtp_url=SMTP_URL, smtp_port=SMTP_PORT,
-                smtp_email=SMTP_EMAIL, smtp_password=SMTP_PASSWORD)
-    email_templates = EmailTemplates()
+    smtp_options: SMTPOptions = SMTPOptions(
+        host=SMTP_HOST, port=SMTP_PORT, username=SMTP_USER, password=SMTP_PASSWORD)
+    smtp: SMTP = SMTP(smtp_options=smtp_options)
+    email_templates: EmailTemplates = EmailTemplates()
 
-    has_ip_changed = False
-    old_ip_address = ""
+    has_ip_changed: bool = False
+    old_ip_address: str = ""
 
     # Ipify GET
     ip_response = requests.get(IPIFY_API_URL)
@@ -46,8 +49,8 @@ def job():
         ip = ip_response.json()["ip"]
 
         # Linode
-        firewall_response = requests.get(LINODE_FIREWALL_RULES_URL.format(
-            str(LINODE_FIREWALL_ID)), headers={"Authorization": "Bearer " + LINODE_TOKEN})
+        firewall_response = requests.get(
+            LINODE_FIREWALL_RULES_URL, headers=LINODE_HEADERS)
 
         if firewall_response.status_code == 200:
             firewall = firewall_response.json()
@@ -61,37 +64,37 @@ def job():
                     inbound_rule["addresses"]["ipv4"][0] = ip + "/32"
 
             if has_ip_changed:
-                logging.info("Updating Linode firewall, {}, with IP from {} to {} for label, {}.".format(
-                    str(LINODE_FIREWALL_ID), old_ip_address, ip, LINODE_LABEL_NAME))
+                logging.info(
+                    f"Updating Linode firewall, {str(LINODE_FIREWALL_ID)}, with IP from {old_ip_address} to {ip} for label, {LINODE_LABEL_NAME}")
 
-                updated_firewall_response = requests.put(LINODE_FIREWALL_RULES_URL.format(str(
-                    LINODE_FIREWALL_ID)), headers={"Authorization": "Bearer " + LINODE_TOKEN}, json=firewall)
+                updated_firewall_response = requests.put(
+                    LINODE_FIREWALL_RULES_URL, headers=LINODE_HEADERS, json=firewall)
                 if updated_firewall_response.status_code == 200:
                     logging.info("Sending email...")
-                    subject = "Firewall has updated"
-                    body = email_templates.generate_basic_template(
-                        dict(email_greeting=EMAIL_GREETING, from_ip=old_ip_address, to_ip=ip, proxy_url=PROXY_URL))
-                    smtp.send_email(from_email=FROM_EMAIL,
-                                    to_email=TO_EMAIL, subject=subject, body=body)
+                    email: Email = Email(from_name=FROM_NAME, from_email=FROM_EMAIL, to_name=TO_NAME, to_email=TO_EMAIL,
+                                         subject="Firewall has updated",
+                                         body=email_templates.generate_basic_template(
+                                             dict(to_name=TO_NAME, from_ip=old_ip_address, to_ip=ip, proxy_url=PROXY_URL)))
+                    smtp.send_email(email=email)
 
                     logging.info("Job finished. Firewall has been updated.")
                 elif updated_firewall_response.status_code in [401, 403]:
-                    logging.error("api.linode.com (update firewall rules) has an authentication issue. Status: {}".format(
-                        str(ip_response.status_code)))
+                    logging.error(
+                        f"api.linode.com (update firewall rules) has an authentication issue. Status: {str(ip_response.status_code)}")
                 elif updated_firewall_response.status_code in [500, 502, 503, 504]:
-                    logging.error("api.linode.com (update firewall rules) has failed due to a server side issue has occurred. Status: {}".format(
-                        str(ip_response.status_code)))
+                    logging.error(
+                        f"api.linode.com (update firewall rules) has failed due to a server side issue has occurred. Status: {str(ip_response.status_code)}")
             else:
                 logging.info("Job finished. No update.")
         elif firewall_response.status_code in [401, 403]:
-            logging.error("api.linode.com (get firewall rules) has an authentication issue. Status: {}".format(
-                str(ip_response.status_code)))
+            logging.error(
+                f"api.linode.com (get firewall rules) has an authentication issue. Status: {str(ip_response.status_code)}")
         elif firewall_response.status_code in [500, 502, 503, 504]:
-            logging.error("api.linode.com (get firewall rules) has failed due to a server side issue has occurred. Status: {}".format(
-                str(ip_response.status_code)))
+            logging.error(
+                f"api.linode.com (get firewall rules) has failed due to a server side issue has occurred. Status: {str(ip_response.status_code)}")
     elif ip_response.status_code in [401, 403, 429, 500, 502, 503, 504]:
         logging.error(
-            "api.ipify.org has returned an unexpected status. Status: {}".format(str(ip_response.status_code)))
+            f"api.ipify.org has returned an unexpected status. Status: {str(ip_response.status_code)}")
 
 
 schedule.every(5).minutes.do(job)

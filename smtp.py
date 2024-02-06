@@ -1,31 +1,60 @@
+from dataclasses import dataclass
 import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from uuid import uuid4
+
+
+@dataclass
+class Email:
+    from_name: str
+    from_email: str
+    to_name: str
+    to_email: str
+    subject: str
+    body: str
+
+
+@dataclass
+class SMTPOptions:
+    host: str
+    port: int
+    username: str
+    password: str
 
 
 class SMTP:
-    def __init__(self, smtp_url, smtp_port, smtp_email, smtp_password):
-        # Initialize using a smtp_url, smtp_port, smtp_email, and smtp_password
-        assert len(smtp_url) > 0
-        assert len(smtp_port) > 0 and smtp_port.isnumeric()
-        assert len(smtp_email) > 0
-        assert len(smtp_password) > 0
+    smtp_options: SMTPOptions
 
-        self.smtp_url = smtp_url
-        self.smtp_port = int(smtp_port)
-        self.smtp_email = smtp_email
-        self.smtp_password = smtp_password
+    def __init__(self, smtp_options: SMTPOptions):
+        self.smtp_options = smtp_options
 
-    def send_email(self, from_email, to_email, subject, body):
+    def send_email(self, email: Email):
         message = MIMEMultipart("alternative")
-        message["Subject"] = subject
-        message["From"] = from_email
-        message["To"] = to_email
+        message["Subject"] = email.subject
+        message["From"] = f"{email.from_name} <{email.from_email}>"
 
-        message.attach(MIMEText(body, "html"))
+        if (len(email.to_name) > 0):
+            message["To"] = f"{email.to_name} <{email.to_email}>"
+        else:
+            message["To"] = email.to_email
+
+        try:
+            message_id = f"<{uuid4()}@{email.from_email.split('@')[1]}>"
+        except IndexError:
+            # this should never happen with a valid email address,
+            # but we let the SMTP server handle it instead of raising it here
+            message_id = f"<{uuid4()}@{email.from_email}>"
+
+        message["Message-ID"] = message_id
+        message["MIME-Version"] = "1.0"
+
+        message.attach(MIMEText(email.body, "html"))
 
         context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(self.smtp_url, self.smtp_port, context=context) as server:
-            server.login(self.smtp_email, self.smtp_password)
-            server.sendmail(from_email, to_email, message.as_string())
+        with smtplib.SMTP_SSL(self.smtp_options.host, self.smtp_options.port, context=context) as server:
+            server.login(self.smtp_options.username,
+                         self.smtp_options.password)
+            server.sendmail(email.from_email, email.to_email,
+                            message.as_string())

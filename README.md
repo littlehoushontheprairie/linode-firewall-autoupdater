@@ -1,4 +1,4 @@
-# Update Linode Firewall Script
+# Linode Firewall Autoupdater
 
 The Linode firewall uses an allowlist to prevent unwanted traffic on my server. This script is to update the allowlist in the Linode firewall automatically and runs its job every 5 minutes in the Docker container.
 
@@ -7,7 +7,7 @@ The Linode firewall uses an allowlist to prevent unwanted traffic on my server. 
 1. Download repo
     - `git checkout develop`
     - `git pull`
-    - `cd update-firewall`
+    - `cd linode-firewall-autoupdater`
 2. Export environment variables
 3. run docker-compose
     - `docker-compose up --build -d`
@@ -23,15 +23,16 @@ The script reads in email templates everytime it is ran. You can customize the t
 
 ## Environment Variables
 
-| Variable       | Required | Default | Example                        | Needed by                     |
-| -------------- | -------- | ------- | ------------------------------ | ----------------------------- |
-| FROM_EMAIL     | true     | ---     | from@example.com               | SMTP Server (send email from) |
-| TO_EMAIL       | true     | ---     | to@example.com                 | SMTP Server (send email to)   |
-| EMAIL_GREETING | true     | ---     | Laura                          | Template                      |
-| PROXY_URL      | true     | ---     | nginx.example.com              | Template                      |
-| SMTP_URL       | true     | ---     | smtp.example.com               | SMTP Server                   |
-| SMTP_PORT      | true     | ---     | 465                            | SMTP Server                   |
-| SMTP_EMAIL     | true     | ---     | laura@example.com              | SMTP Server                   |
-| SMTP_PASSWORD  | true     | ---     | 8f5cd6729h0v5d247vc190ddcs4l2a | SMTP Server                   |
+| Variable      | Required | Default                     | Example                        | Needed by                     |
+| ------------- | -------- | --------------------------- | ------------------------------ | ----------------------------- |
+| FROM_NAME     | false    | Linode Firewall Autoupdater | Linode Firewall Autoupdater    | SMTP Server (send email from) |
+| FROM_EMAIL    | true     | ---                         | from@example.com               | SMTP Server (send email from) |
+| TO_NAME       | false    |                             | Laura                          | SMTP Server (send email to)   |
+| TO_EMAIL      | true     | ---                         | to@example.com                 | SMTP Server (send email to)   |
+| PROXY_URL     | true     | ---                         | nginx.example.com              | Template                      |
+| SMTP_HOST     | true     | ---                         | smtp.example.com               | SMTP Server                   |
+| SMTP_PORT     | false    | 465                         | 465                            | SMTP Server                   |
+| SMTP_USER     | true     | ---                         | laura@example.com              | SMTP Server                   |
+| SMTP_PASSWORD | true     | ---                         | 8f5cd6729h0v5d247vc190ddcs4l2a | SMTP Server                   |
 
 **NOTE:** For security purposes, it is strong recommended that you use a generated API passwords.
