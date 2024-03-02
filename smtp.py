@@ -35,7 +35,7 @@ class SMTP:
         message["Subject"] = email.subject
         message["From"] = f"{email.from_name} <{email.from_email}>"
 
-        if (len(email.to_name) > 0):
+        if (email.to_name):
             message["To"] = f"{email.to_name} <{email.to_email}>"
         else:
             message["To"] = email.to_email
