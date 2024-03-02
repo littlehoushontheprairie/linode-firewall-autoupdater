@@ -6,25 +6,37 @@ import time
 from smtp import SMTP, Email, SMTPOptions
 from email_templates import EmailTemplates
 
-LINODE_TOKEN: str = os.environ.get("LINODE_TOKEN", "")
-LINODE_FIREWALL_ID: str = os.environ.get("LINODE_FIREWALL_ID", "")
-LINODE_LABEL_NAME: str = os.environ.get("LINODE_LABEL_NAME", "")
+LINODE_TOKEN: str = os.environ.get("LINODE_TOKEN")
+LINODE_FIREWALL_ID: str = os.environ.get("LINODE_FIREWALL_ID")
+LINODE_LABEL_NAME: str = os.environ.get("LINODE_LABEL_NAME")
 LINODE_FIREWALL_RULES_URL: str = f"https://api.linode.com/v4/networking/firewalls/{LINODE_FIREWALL_ID}/rules"
-LINODE_HEADERS: dict = {"Authorization": "Bearer " + LINODE_TOKEN}
+LINODE_HEADERS: dict = {"Authorization": "Bearer " + LINODE_TOKEN if LINODE_TOKEN is not None else ""}
 
 FROM_NAME: str = os.environ.get("FROM_NAME", "Linode Firewall Autoupdater")
-FROM_EMAIL: str = os.environ.get("FROM_EMAIL", "")
+FROM_EMAIL: str = os.environ.get("FROM_EMAIL")
 TO_NAME: str = os.environ.get("TO_NAME", "")
-TO_EMAIL: str = os.environ.get("TO_EMAIL", "")
+TO_EMAIL: str = os.environ.get("TO_EMAIL")
 
-SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
-SMTP_PORT: int = os.environ.get("SMTP_PORT", 465)
-SMTP_USER: str = os.environ.get("SMTP_USER", "")
+SMTP_HOST: str = os.environ.get("SMTP_HOST")
+SMTP_PORT: int = int(os.environ.get("SMTP_PORT", 465))
+SMTP_USER: str = os.environ.get("SMTP_USER")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 
 PROXY_URL: str = os.environ.get("PROXY_URL")
 
 IPIFY_API_URL: str = "https://api.ipify.org?format=json"
+
+
+assert (LINODE_TOKEN is None, "LINODE_TOKEN is required.")
+assert (LINODE_FIREWALL_ID is None, "LINODE_FIREWALL_ID is required.")
+assert (LINODE_LABEL_NAME is None, "LINODE_LABEL_NAME is required.")
+assert (FROM_EMAIL is None, "FROM_EMAIL is required.")
+assert (TO_EMAIL is None, "TO_EMAIL is required.")
+assert (SMTP_HOST is None, "SMTP_HOST is required.")
+assert (SMTP_USER is None, "SMTP_USER is required.")
+assert (SMTP_PASSWORD is None, "SMTP_PASSWORD is required.")
+assert (PROXY_URL is None, "PROXY_URL is required.")
+
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s %(levelname)-8s %(message)s",

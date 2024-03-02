@@ -3,7 +3,7 @@ version: "3.5"
 services:
   linode_firewall_autoupdater:
     container_name: linode_firewall_autoupdater
-    image: "littlehoushontheprairie/linode_firewall_autoupdater:latest"
+    image: ghcr.io/littlehoushontheprairie/linode_firewall_autoupdater:latest
     restart: always
     network_mode: host
     build:
@@ -17,12 +17,10 @@ services:
       LINODE_TOKEN: "${LINODE_TOKEN}"
       LINODE_FIREWALL_ID: "${LINODE_FIREWALL_ID}"
       LINODE_LABEL_NAME: "${LINODE_LABEL_NAME}"
-      FROM_NAME: "${FROM_NAME}"
       FROM_EMAIL: "${FROM_EMAIL}"
       TO_NAME: "${TO_NAME}"
       TO_EMAIL: "${TO_EMAIL}"
       SMTP_HOST: "${SMTP_HOST}"
-      SMTP_PORT: ${SMTP_PORT}
       SMTP_USER: "${SMTP_USER}"
       SMTP_PASSWORD: "${SMTP_PASSWORD}"
       PROXY_URL: "${PROXY_URL}"
