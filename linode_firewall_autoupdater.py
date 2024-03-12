@@ -10,7 +10,8 @@ LINODE_TOKEN: str = os.environ.get("LINODE_TOKEN")
 LINODE_FIREWALL_ID: str = os.environ.get("LINODE_FIREWALL_ID")
 LINODE_LABEL_NAME: str = os.environ.get("LINODE_LABEL_NAME")
 LINODE_FIREWALL_RULES_URL: str = f"https://api.linode.com/v4/networking/firewalls/{LINODE_FIREWALL_ID}/rules"
-LINODE_HEADERS: dict = {"Authorization": "Bearer " + LINODE_TOKEN if LINODE_TOKEN is not None else ""}
+LINODE_HEADERS: dict = {"Authorization": "Bearer " +
+                        LINODE_TOKEN if LINODE_TOKEN is not None else ""}
 
 FROM_NAME: str = os.environ.get("FROM_NAME", "Linode Firewall Autoupdater")
 FROM_EMAIL: str = os.environ.get("FROM_EMAIL")

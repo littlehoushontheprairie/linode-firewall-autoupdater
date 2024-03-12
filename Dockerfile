@@ -10,4 +10,4 @@ COPY templates/error.html ./templates/error.html
 RUN chmod 0755 linode_firewall_autoupdater.py smtp.py email_templates.py templates/index.html templates/error.html
 RUN pip install requests schedule
 
-CMD [ "python", "./linode_firewall_autoupdater.py" ]
+CMD [ "python", "-Wignore", "./linode_firewall_autoupdater.py" ]
