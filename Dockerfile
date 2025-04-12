@@ -11,7 +11,7 @@ COPY smtp.py .
 COPY email_templates.py .
 COPY templates/index.html ./templates/index.html
 COPY templates/error.html ./templates/error.html
-RUN chmod 0755 linode_firewall_autoupdater.py smtp.py email_templates.py templates/index.html templates/error.html
+RUN chmod +rx linode_firewall_autoupdater.py smtp.py email_templates.py templates/index.html templates/error.html
 
 # Copy the cron job file into the cron.d directory
 COPY cron.jobs /etc/cron.d/cron.jobs
