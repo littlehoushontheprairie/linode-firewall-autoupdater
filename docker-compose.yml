@@ -1,5 +1,3 @@
-version: "3.5"
-
 services:
   linode_firewall_autoupdater:
     container_name: linode_firewall_autoupdater

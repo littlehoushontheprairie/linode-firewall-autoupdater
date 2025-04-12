@@ -52,8 +52,6 @@ The Linode firewall uses an allowlist to prevent unwanted traffic on my server. 
 2. Add content.
 
     - ```
-      version: "3.5"
-
       services:
         linode_firewall_autoupdater:
           container_name: linode_firewall_autoupdater
