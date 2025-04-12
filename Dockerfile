@@ -2,10 +2,8 @@ FROM debian:latest
 
 WORKDIR /root
 
-# Set environment variables for proxy settings
-
 # Update the package list and install cron
-RUN apt update && apt install --no-install-recommends -y cron vim python3 python3-requests
+RUN apt update && apt install --no-install-recommends -y cron python3 python3-requests
 
 # Copy the current directory contents into the container at /root
 COPY linode_firewall_autoupdater.py .
