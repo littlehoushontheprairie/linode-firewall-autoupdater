@@ -7,7 +7,11 @@ class EmailTemplates:
         self.error_template: str = file.read()
 
     def generate_basic_template(self, entries: dict) -> str:
-        return self.basic_template.format(to_name=entries["to_name"], inbound_rule_changes=entries["inbound_rule_changes"], proxy_url=entries["proxy_url"])
+        return self.basic_template.format(
+            to_name=entries["to_name"],
+            inbound_rule_changes=self.generate_inbound_rule_changes(entries["inbound_rule_changes"]),
+            proxy_url=entries["proxy_url"]
+        )
 
     def generate_error_template(self, entries: dict) -> str:
         return self.error_template.format(to_name=entries["to_name"], status_code=entries["status_code"])

@@ -35,7 +35,7 @@ class SMTP:
         message["Subject"] = email.subject
         message["From"] = f"{email.from_name} <{email.from_email}>"
 
-        if (email.to_name):
+        if email.to_name:
             message["To"] = f"{email.to_name} <{email.to_email}>"
         else:
             message["To"] = email.to_email
@@ -54,7 +54,5 @@ class SMTP:
 
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL(self.smtp_options.host, self.smtp_options.port, context=context) as server:
-            server.login(self.smtp_options.username,
-                         self.smtp_options.password)
-            server.sendmail(email.from_email, email.to_email,
-                            message.as_string())
+            server.login(self.smtp_options.username, self.smtp_options.password)
+            server.sendmail(email.from_email, email.to_email, message.as_string())

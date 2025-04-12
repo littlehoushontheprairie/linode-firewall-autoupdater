@@ -109,7 +109,13 @@ if ip_response.status_code == 200:
         email: Email = Email(from_name=FROM_NAME, from_email=FROM_EMAIL, to_name=TO_NAME, to_email=TO_EMAIL,
                              subject="Firewall has been updated",
                              body=email_templates.generate_basic_template(
-                                 dict(to_name=TO_NAME, inbound_rule_changes=email_templates.generate_inbound_rule_changes(inbound_rule_changes=inbound_rule_changes), proxy_url=PROXY_URL)))
+                                     entries={
+                                         "to_name": TO_NAME,
+                                         "inbound_rule_changes": inbound_rule_changes,
+                                         "proxy_url": PROXY_URL
+                                    }
+                                 )
+                             )
         smtp.send_email(email=email)
         logging.info(f"Job finished. Updated {len(inbound_rule_changes)} firewalls.")
     else:
