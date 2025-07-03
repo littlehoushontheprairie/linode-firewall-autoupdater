@@ -1,6 +1,7 @@
 import os
 import requests
 import logging
+import pickle
 from dataclasses import dataclass
 from smtp import SMTP, Email, SMTPOptions
 from email_templates import EmailTemplates
@@ -40,6 +41,35 @@ class InboundRuleChange:
     from_ip: str
     to_ip: str
 
+# Cache for Requests
+def get_firewall(firewall_id: str):
+    cached_response = read_cached_response(firewall_id)
+
+    if cached_response:
+        logging.info(f"Using cached response for firewall ID: {firewall_id}")
+        return cached_response
+
+    response = requests.get(f"{LINODE_API_URL}{firewall_id}", headers=LINODE_HEADERS)
+    cache_response(firewall_id, response)
+    return response
+
+def cache_response(firewall_id: str, response: requests.Response):
+    with open(f'{firewall_id}.pkl', 'wb') as output:
+        pickle.dump(response, output, pickle.HIGHEST_PROTOCOL)
+
+def clear_cached_response(firewall_id: str):
+    try:
+        os.remove(f'{firewall_id}.pkl')
+    except FileNotFoundError:
+        pass
+
+def read_cached_response(firewall_id: str) -> requests.Response:
+    try:
+        with open(f'{firewall_id}.pkl', 'rb') as input_file:
+            return pickle.load(input_file)
+    except (FileNotFoundError, EOFError):
+        return None
+
 # Check required environment variables
 if not LINODE_TOKEN or not LINODE_FIREWALL_IDS or not LINODE_LABEL_NAME:
     logging.error("LINODE_TOKEN, LINODE_FIREWALL_IDS, and LINODE_LABEL_NAME are required.")
@@ -68,7 +98,7 @@ if ip_response.status_code == 200:
 
     # Linode API
     for firewall_id in LINODE_FIREWALL_IDS:
-        firewall_response = requests.get(f"{LINODE_API_URL}{firewall_id}", headers=LINODE_HEADERS)
+        firewall_response = get_firewall(firewall_id)
 
         if firewall_response.status_code == 200:
             firewall: dict = firewall_response.json()
@@ -78,6 +108,9 @@ if ip_response.status_code == 200:
 
             for inbound_rule in inbound_rules:
                 if LINODE_LABEL_NAME + "-" in inbound_rule["label"] and ip not in inbound_rule["addresses"]["ipv4"][0]:
+                    logging.info("Clearing cached response...")
+                    clear_cached_response(firewall_id)
+
                     if inbound_rule_changes.get(firewall_id) is None:
                         inbound_rule_changes[firewall_id] = InboundRuleChange(
                             firewall_id=firewall_id,
