@@ -5,6 +5,7 @@ import pickle
 from dataclasses import dataclass
 from smtp import SMTP, Email, SMTPOptions
 from email_templates import EmailTemplates
+from typing import Optional
 
 
 # Logging configuration
@@ -41,34 +42,28 @@ class InboundRuleChange:
     from_ip: str
     to_ip: str
 
-# Cache for Requests
-def get_firewall(firewall_id: str):
-    cached_response = read_cached_response(firewall_id)
+# Cache for IP address only
 
-    if cached_response:
-        logging.info(f"Using cached response for firewall ID: {firewall_id}")
-        return cached_response
+def cache_ip(firewall_id: str, ip: str):
+    with open(f'{firewall_id}_ip.pkl', 'wb') as output:
+        pickle.dump(ip, output, pickle.HIGHEST_PROTOCOL)
 
-    response = requests.get(f"{LINODE_API_URL}{firewall_id}", headers=LINODE_HEADERS)
-    cache_response(firewall_id, response)
-    return response
-
-def cache_response(firewall_id: str, response: requests.Response):
-    with open(f'{firewall_id}.pkl', 'wb') as output:
-        pickle.dump(response, output, pickle.HIGHEST_PROTOCOL)
-
-def clear_cached_response(firewall_id: str):
+def clear_cached_ip(firewall_id: str):
     try:
-        os.remove(f'{firewall_id}.pkl')
+        os.remove(f'{firewall_id}_ip.pkl')
     except FileNotFoundError:
         pass
 
-def read_cached_response(firewall_id: str) -> requests.Response:
+def read_cached_ip(firewall_id: str) -> Optional[str]:
     try:
-        with open(f'{firewall_id}.pkl', 'rb') as input_file:
+        with open(f'{firewall_id}_ip.pkl', 'rb') as input_file:
             return pickle.load(input_file)
     except (FileNotFoundError, EOFError):
         return None
+
+def get_firewall(firewall_id: str):
+    """Get firewall details from Linode API."""
+    return requests.get(f"{LINODE_API_URL}{firewall_id}", headers=LINODE_HEADERS)
 
 # Check required environment variables
 if not LINODE_TOKEN or not LINODE_FIREWALL_IDS or not LINODE_LABEL_NAME:
@@ -96,8 +91,13 @@ ip_response = requests.get(IPIFY_API_URL)
 if ip_response.status_code == 200:
     ip = ip_response.json()["ip"]
 
-    # Linode API
+    # Only fetch firewall if cached IP does not match new IP
     for firewall_id in LINODE_FIREWALL_IDS:
+        cached_ip = read_cached_ip(firewall_id)
+        if cached_ip == ip:
+            logging.info(f"Firewall {firewall_id} already has IP {ip} cached. Skipping update.")
+            continue
+
         firewall_response = get_firewall(firewall_id)
 
         if firewall_response.status_code == 200:
@@ -107,30 +107,31 @@ if ip_response.status_code == 200:
             inbound_rules: list = firewall_rules["inbound"]
 
             for inbound_rule in inbound_rules:
-                if LINODE_LABEL_NAME + "-" in inbound_rule["label"] and ip not in inbound_rule["addresses"]["ipv4"][0]:
-                    logging.info("Clearing cached response...")
-                    clear_cached_response(firewall_id)
+                if LINODE_LABEL_NAME + "-" in inbound_rule["label"]:
+                    current_ip = inbound_rule["addresses"]["ipv4"][0].split("/")[0]
+                    if ip != current_ip:
+                        logging.info("Clearing cached IP...")
+                        clear_cached_ip(firewall_id)
 
-                    if inbound_rule_changes.get(firewall_id) is None:
-                        inbound_rule_changes[firewall_id] = InboundRuleChange(
-                            firewall_id=firewall_id,
-                            firewall_name=firewall_name,
-                            from_ip=inbound_rule["addresses"]["ipv4"][0].split("/")[0],
-                            to_ip=ip
-                        )
+                        if inbound_rule_changes.get(firewall_id) is None:
+                            inbound_rule_changes[firewall_id] = InboundRuleChange(
+                                firewall_id=firewall_id,
+                                firewall_name=firewall_name,
+                                from_ip=current_ip,
+                                to_ip=ip
+                            )
 
-                    old_ip_address: str = inbound_rule["addresses"]["ipv4"][0].split("/")[0]
-                    inbound_rule["addresses"]["ipv4"][0] = ip + "/32"
+                        inbound_rule["addresses"]["ipv4"][0] = ip + "/32"
+                        logging.info(f"Updating Linode firewall, {firewall_name}, with IP from {current_ip} to {ip} for label, {LINODE_LABEL_NAME}")
 
-                    logging.info(f"Updating Linode firewall, {firewall_name}, with IP from {old_ip_address} to {ip} for label, {LINODE_LABEL_NAME}")
-
-                    updated_firewall_response = requests.put(f"{LINODE_API_URL}{firewall_id}/rules", headers=LINODE_HEADERS, json=firewall_rules)
-                    if updated_firewall_response.status_code == 200:
-                        logging.info(f"Firewall,{firewall_id} {firewall_name}, has been updated.")
-                    elif updated_firewall_response.status_code in [401, 403]:
-                        logging.error(f"api.linode.com (update firewall rules) has an authentication issue. Status: {str(ip_response.status_code)}")
-                    elif updated_firewall_response.status_code in [500, 502, 503, 504]:
-                        logging.error(f"api.linode.com (update firewall rules) has failed due to a server side issue has occurred. Status: {str(ip_response.status_code)}")
+                        updated_firewall_response = requests.put(f"{LINODE_API_URL}{firewall_id}/rules", headers=LINODE_HEADERS, json=firewall_rules)
+                        if updated_firewall_response.status_code == 200:
+                            logging.info(f"Firewall,{firewall_id} {firewall_name}, has been updated.")
+                            cache_ip(firewall_id, ip)
+                        elif updated_firewall_response.status_code in [401, 403]:
+                            logging.error(f"api.linode.com (update firewall rules) has an authentication issue. Status: {str(ip_response.status_code)}")
+                        elif updated_firewall_response.status_code in [500, 502, 503, 504]:
+                            logging.error(f"api.linode.com (update firewall rules) has failed due to a server side issue has occurred. Status: {str(ip_response.status_code)}")
 
         elif firewall_response.status_code in [401, 403]:
             logging.error(f"api.linode.com (get firewall rules) has an authentication issue. Status: {str(ip_response.status_code)}")
